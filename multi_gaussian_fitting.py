@@ -70,6 +70,11 @@ def MGauss_Err(PARM, TARGET):
         by the multi-Gaussian fitting."""
     OUT=(TARGET - Fun_MGauss(len(TARGET),PARM))
     OUT=np.sum(OUT**2)
+
+    # Add penalties when any parameters become negative
+    l1 = 1
+    OUT += l1*np.linalg.norm(np.minimum(0, PARM), ord=2)
+
     return OUT
 
 def Fit_MGauss(TARGET, PARM0, METHOD):
@@ -138,14 +143,17 @@ def count_peak(SPEC, PARM, threshold):
     print(MG_Sum)
     
     print(np.where(MG_Sum>threshold*area))
-    N_spikes = np.where(MG_Sum>threshold*area)[0][0]+1
+    try:
+        N_spikes = np.where(MG_Sum>threshold*area)[0][0]+1
+    except Exception:
+        N_spikes = len(PARM)//3
 
     if N_spikes == 1:
         PARM_reshape = PARM.reshape((-1, 3))
         PARM_rec = PARM_reshape[np.argsort(Gaussian_integral)[-1], :]
         PARM_new = np.ravel(PARM_rec)
         fitting_curve = Fun_MGauss(len(SPEC), PARM_new)
-        peaks = PARM_new[1]
+        peaks = int(np.ceil(PARM_new[1]))
     else:
         PARM_reshape = PARM.reshape((-1, 3))
         PARM_rec = PARM_reshape[np.argsort(Gaussian_integral)[-N_spikes:], :]
@@ -197,4 +205,3 @@ if __name__ == "__main__":
     # plt.ylabel('Arbitrary Unit')
     # plt.title("XFEL Spectrum")
     # plt.show()
-
