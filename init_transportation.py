@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 import h5py
 from scipy import constants
 
-bunch = h5py.File('/home/zhaohengguo/Desktop/GENESIS4_Input/670eV_X450um_Y420um.bun', 'r')
+bunch = h5py.File('/home/zhaohengguo/Desktop/GENESIS4_Input/670eV_X450um_Y420um_bad_emit_init_match.bun', 'r')
 gamma = bunch['pCentral'][()] # The central energy of the bunch
 
 class Undulator:
@@ -503,30 +503,33 @@ def set_up_orbit_correctors(ps_beg, delay, id_slice1, ds_slice, zplot, id_slices
 ## Initialize all the components
 
 ### QUAD ###
-QUAD01=Quadrupole(0.078,-1.9801543288464778e+00)
-QUAD02=Quadrupole(0.078,+1.9801543288464778e+00)
-QUAD03=Quadrupole(0.078,-1.9801543288464778e+00)
-QUAD04=Quadrupole(0.078,+1.9801543288464778e+00)
-QUAD05=Quadrupole(0.078,-1.9801543288464778e+00)
-QUAD06=Quadrupole(0.078,+1.9801543288464778e+00)
-QUAD07=Quadrupole(0.078,-1.9801543288464778e+00)
-QUAD08=Quadrupole(0.078,+1.9801543288464778e+00)
-QUAD09=Quadrupole(0.078,-1.9801543288464778e+00)
-QUAD10=Quadrupole(0.078,+1.9801543288464778e+00)
-QUAD11=Quadrupole(0.078,-1.9801543288464778e+00)
-QUAD12=Quadrupole(0.078,+1.9801543288464778e+00)
-QUAD13=Quadrupole(0.078,-1.9801543288464778e+00)
-QUAD14=Quadrupole(0.078,+1.9801543288464778e+00)
-QUAD15=Quadrupole(0.078,-1.9801543288464778e+00)
-QUAD16=Quadrupole(0.078,+1.9801543288464778e+00)
-QUAD17=Quadrupole(0.078,-1.9801543288464778e+00)
-QUAD18=Quadrupole(0.078,+1.9801543288464778e+00)
-QUAD19=Quadrupole(0.078,-1.9801543288464778e+00)
-QUAD20=Quadrupole(0.078,+1.9801543288464778e+00)
-QUAD21=Quadrupole(0.078,-1.9801543288464778e+00)
-QUAD22=Quadrupole(0.078,+1.9801543288464778e+00)
-QUAD23=Quadrupole(0.078,-1.9801543288464778e+00)
-QUAD24=Quadrupole(0.078,+1.9801543288464778e+00)
+
+# 1.9801543
+
+QUAD01=Quadrupole(0.078,-2.97177294204433)
+QUAD02=Quadrupole(0.078,+2.97177294204433)
+QUAD03=Quadrupole(0.078,-2.97177294204433)
+QUAD04=Quadrupole(0.078,+2.97177294204433)
+QUAD05=Quadrupole(0.078,-2.97177294204433)
+QUAD06=Quadrupole(0.078,+2.97177294204433)
+QUAD07=Quadrupole(0.078,-2.97177294204433)
+QUAD08=Quadrupole(0.078,+2.97177294204433)
+QUAD09=Quadrupole(0.078,-2.97177294204433)
+QUAD10=Quadrupole(0.078,+2.97177294204433)
+QUAD11=Quadrupole(0.078,-2.97177294204433)
+QUAD12=Quadrupole(0.078,+2.97177294204433)
+QUAD13=Quadrupole(0.078,-2.97177294204433)
+QUAD14=Quadrupole(0.078,+2.97177294204433)
+QUAD15=Quadrupole(0.078,-2.97177294204433)
+QUAD16=Quadrupole(0.078,+2.97177294204433)
+QUAD17=Quadrupole(0.078,-2.97177294204433)
+QUAD18=Quadrupole(0.078,+2.97177294204433)
+QUAD19=Quadrupole(0.078,-2.97177294204433)
+QUAD20=Quadrupole(0.078,+2.97177294204433)
+QUAD21=Quadrupole(0.078,-2.97177294204433)
+QUAD22=Quadrupole(0.078,+2.97177294204433)
+QUAD23=Quadrupole(0.078,-2.97177294204433)
+QUAD24=Quadrupole(0.078,+2.97177294204433)
 
 ### Drift ###
 D1 = Drift( 0.261 )
@@ -747,15 +750,3 @@ UND24, D2, QUAD24, CORR24]
 U_core = [U1_core, U2_core, U3_core]
 
 
-
-
-## Begin to write some file
-
-# ps_beg = np.zeros((4, len(bunch["t"])))
-
-# ps_beg[0, :] = bunch["x"]
-# ps_beg[1, :] = bunch["xp"]
-# ps_beg[2, :] = bunch["y"]
-# ps_beg[3, :] = bunch["yp"]
-
-# id_slices, zplot = flip_slice(bunch["t"], bins = 200)

@@ -19,20 +19,15 @@ if __name__ == "__main__":
 
     id_slices, zplot, hist = flip_slice(bunch["t"], bins = N_bin)
 
-    id_slice1 = 50
+    id_slice1 = 100
     delay = np.array([1.2e-06, 1.20e-06])
 
     c = 299792458  # Speed of the light
     bunch_length = c*np.ptp(bunch["t"])
     ds_len = bunch_length/N_bin # The length of one slice in s
-    Undulator_Beamline = set_up_orbit_correctors(ps_beg, delay, id_slice1, ds_len, zplot, id_slices, U_core, lambdaref)
-
-    # We also want to get the phase space distribution along the bunch at the undulator entrance.
-    ps_beg_s = beam_property_along_s(ps_beg, id_slices)
-
-    ##########
+    
     beamline_id = Quadrupole
-    ps_end = analyze_phase_space_at_end(ps_beg, Undulator_Beamline, beamline_id, id_slices, N_bin)
+    ps_end = analyze_phase_space_at_end(ps_beg, U3_no_kick, beamline_id, id_slices, N_bin)
 
     ds_slice = np.average(np.diff(zplot))
     analyze_on_axis(ps_end, 2, 8, ds_slice, zplot)
