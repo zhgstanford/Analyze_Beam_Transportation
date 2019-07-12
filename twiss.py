@@ -1,7 +1,7 @@
 import numpy as np 
 import matplotlib.pyplot as plt 
 import h5py 
-from init_transportation import *
+from LCLS_beamline import *
 
 def calculate_twiss(M):
     """Input the 2D transform matrix and output Twiss parameters in X and Y."""
@@ -24,7 +24,7 @@ def calculate_twiss(M):
 if __name__ == "__main__":
     M = np.identity(4)
 
-    lattice = U3[1:9]
+    lattice = LCLS_U3[0:28]
 
     for element in lattice:
         M = np.dot(element.M1, M)
