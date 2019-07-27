@@ -1,7 +1,7 @@
 import h5py
 import numpy as np
 import matplotlib.pyplot as plt
-from init_transportation import *
+from LCLS_beamline import *
 
 if __name__ == "__main__":
 
@@ -18,13 +18,13 @@ if __name__ == "__main__":
     id_slices, zplot, _ = flip_slice(bunch["t"], bins = N_bin)
 
     ##########
-    beamline_id = Quadrupole
-    ps_end = analyze_phase_space_at_end(ps_beg, U3_no_kick, beamline_id, id_slices, N_bin)
+    beamline_id = Orbit_Corrector
+    ps_end = analyze_phase_space_at_end(ps_beg, LCLS_U3, beamline_id, id_slices, N_bin)
 
     ds_slice = np.average(np.diff(zplot))
     analyze_on_axis(ps_end, 2, 8, ds_slice, zplot)
     analyze_on_axis(ps_end, 10, 15, ds_slice, zplot)
-    analyze_on_axis(ps_end, 17, 24, ds_slice, zplot)
+    analyze_on_axis(ps_end, 17, 23, ds_slice, zplot)
 
     # Here we plot the center-of-mass orbit at each BPM. In my code, I plot the center-of-mass orbit at
     # the end of each quadrupole.

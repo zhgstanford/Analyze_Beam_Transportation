@@ -1,7 +1,7 @@
 import h5py
 import numpy as np
 import matplotlib.pyplot as plt
-from init_transportation import *
+from LCLS_beamline import *
 
 if __name__ == "__main__":
 
@@ -19,7 +19,7 @@ if __name__ == "__main__":
 
     id_slices, zplot, hist = flip_slice(bunch["t"], bins = N_bin)
 
-    id_slice1 = 50
+    id_slice1 = 80
     delay = np.array([1.2e-06, 1.20e-06])
 
     c = 299792458  # Speed of the light
