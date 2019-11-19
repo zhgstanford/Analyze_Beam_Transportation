@@ -47,10 +47,10 @@ def LTU_orbit(ps_slice, id_slice, XCUM1_to_YCUM2, YCUM2_to_YCUM3, YCUM3_to_XCUM4
 
 if __name__ == "__main__":
 
-    bunch = h5py.File('/home/zhaohengguo/Desktop/GENESIS4_Input/X15Y14_noOC.bun', 'r')
+    bunch = h5py.File('/home/zhaohengguo/Desktop/GENESIS4_Input/X0Y7_noOC_1DCH.bun', 'r')
     gamma = bunch['pCentral'][()] # The central energy of the bunch
 
-    N_bin = 500
+    N_bin = 100
     lambdaref = 1.84631767e-09 # Central XFEL wavelength
 
     ps_beg = np.zeros((4, len(bunch["t"])))
@@ -64,7 +64,7 @@ if __name__ == "__main__":
     ps_slice = beam_property_along_s(ps_beg, id_slices)
 
     # Remember: 0 is the tail of the beam
-    XCUM1, YCUM2, YCUM3, XCUM4 = LTU_orbit(ps_slice, 80, XCUM1_to_YCUM2, YCUM2_to_YCUM3, YCUM3_to_XCUM4)
+    XCUM1, YCUM2, YCUM3, XCUM4 = LTU_orbit(ps_slice, 15, XCUM1_to_YCUM2, YCUM2_to_YCUM3, YCUM3_to_XCUM4)
 
 
     ps_end = beam_transportation(ps_beg, XCUM1_to_XCUM4)

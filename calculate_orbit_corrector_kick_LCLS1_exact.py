@@ -1,8 +1,8 @@
 import h5py
 import numpy as np
 import matplotlib.pyplot as plt
-#from LCLS_beamline import *
-from init_transportation import *
+from LCLS_beamline_exact import *
+#from init_transportation import *
 
 if __name__ == "__main__":
 
@@ -20,25 +20,25 @@ if __name__ == "__main__":
 
     id_slices, zplot, hist = flip_slice(bunch["t"], bins = N_bin)
 
-    id_slice1 = 17
-    delay = np.array([1.6e-06, 1.50e-06])
+    id_slice1 = 10
+    delay = np.array([3.15e-06, 2.73e-06])
 
     c = 299792458  # Speed of the light
     bunch_length = c*np.ptp(bunch["t"])
     ds_len = bunch_length/N_bin # The length of one slice in s
-    Undulator_Beamline, OC2_optimized, OC3_optimized = set_up_orbit_correctors(ps_beg, delay, id_slice1, ds_len, zplot, id_slices, U_core, lambdaref)
+    Undulator_Beamline = set_up_orbit_correctors(ps_beg, delay, id_slice1, ds_len, zplot, id_slices, U_core, lambdaref)
 
     # We also want to get the phase space distribution along the bunch at the undulator entrance.
     ps_beg_s = beam_property_along_s(ps_beg, id_slices)
 
     ##########
-    beamline_id = Quadrupole
+    beamline_id = Orbit_Corrector
     ps_end = analyze_phase_space_at_end(ps_beg, Undulator_Beamline, beamline_id, id_slices, N_bin)
 
     ds_slice = np.average(np.diff(zplot))
-    analyze_on_axis(ps_end, 2, 8, ds_slice, zplot)
-    analyze_on_axis(ps_end, 10, 15, ds_slice, zplot)
-    analyze_on_axis(ps_end, 17, 24, ds_slice, zplot)
+    analyze_on_axis(ps_end, 1, 7, ds_slice, zplot)
+    analyze_on_axis(ps_end, 9, 14, ds_slice, zplot)
+    analyze_on_axis(ps_end, 17, 23, ds_slice, zplot)
 
     # Here we plot the center-of-mass orbit at each BPM. In my code, I plot the center-of-mass orbit at
     # the end of each quadrupole.

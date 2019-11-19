@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 import h5py
 from scipy import constants
 
-bunch = h5py.File('/home/zhaohengguo/Desktop/GENESIS4_Input/LCLS2SXR_DECHin_no_OC.bun', 'r')
+bunch = h5py.File('/home/zhaohengguo/Desktop/GENESIS4_Input/LCLS2SXR_DECHin_with_OC.bun', 'r')
 gamma = bunch['pCentral'][()] # The central energy of the bunch
 
 class Undulator:
@@ -27,8 +27,6 @@ class Undulator:
                        [0, 1, 0, 0],
                        [0 , 0 , np.cos(np.sqrt(K_f)*L), 1/np.sqrt(K_f)*np.sin(np.sqrt(K_f)*L)],
                        [0 , 0 , -np.sqrt(K_f)*np.sin(np.sqrt(K_f)*L), np.cos(np.sqrt(K_f)*L)]]
-
-
 
         self.M2 = [[0],
                    [0],
@@ -407,14 +405,13 @@ def analyze_orbit_corrector(OC1, OC2, beamline, phase_beg):
 
     return OC_parameters
 
-def set_up_orbit_correctors(ps_beg, delay, id_slice1, ds_slice, zplot, id_slices, U_core, lambdaref):
+def set_up_orbit_correctors(ps_beg, delay, id_slice1, ds_slice, zplot, id_slices, U_core):
     """I want to use this function to directly set up all orbit correctors.
 
     Input:
     ps_beg: A 4-by-N array. N is the number of macro-particles.
 
-    delay: A array with two elements. They are lengths of delays in two chicanes.
-    Its unit is meter.
+    delay: A real number in unit of um.
 
     id_slice1: A integer. It is the id of the slices that radiates in the first undulator section.
 
@@ -429,330 +426,179 @@ def set_up_orbit_correctors(ps_beg, delay, id_slice1, ds_slice, zplot, id_slices
     U_core: A list of three beamlines. The core part of each undulator beamline doesn't
     contain any orbit correctors.
 
-    lambdaref: The central frequency of the XFEL radiation. Unit: m.
     """
-    SXSS = Chicane(3, 0.1, 0.0, delay[0])
-    HXSS = Chicane(3, 0.1, 0.0, delay[1])
 
-    OC1 = [CORR00, UND01, D1, QUAD01, CORR01]
-    OC2 = [CORR08, SXSS, SXSS_PHASE, D2, QUAD09, CORR09]
-    OC3 = [CORR15, HXSS, HXSS_PHASE, D1, QUAD16, CORR16]
+    U1_core, U2_core = U_core
 
+    Chicane = [CORR08, D3, D1, SXRSS, D2, QSXH35, CORR09]
 
-    # Calculate the phase space distribution of each slice at the undulator entrance.
-    ps_beg_slice1 = beam_property_along_s(ps_beg, id_slices)[0:4, :]
-
-    ps_on_axis_1 = np.ravel(ps_beg_slice1[:, id_slice1])
-
-    # Set up the first pair of orbit correctors.
-    OC1_optimized = analyze_orbit_corrector(OC1[0], OC1[-1], OC1[1:-1], ps_on_axis_1)
-    print(OC1_optimized)
-    CORR00_new = Orbit_Corrector(OC1[0].length, OC1_optimized[0], OC1_optimized[2])
-    CORR01_new = Orbit_Corrector(OC1[-1].length, OC1_optimized[1], OC1_optimized[3])
-
-    # The whole U1 with optimized orbit correctors
-    U1_new = [CORR00_new] + OC1[1:-1] + [CORR01_new] + U_core[0]
-    ps_end1 = beam_transportation(ps_beg, U1_new)
-
-    # ps_end1 is a 4-by-N array. N is the number of macro-particles. It is the full
-    # 4D phase space distribution at the end of the first undulator section.
+    ps_end1 = beam_transportation(ps_beg, U1_core)
 
     # The id of the slice on the axis in the second undulator section
-    on_axis_id_U2 = int(id_slice1+delay[0]/ds_slice+ (8*110)*lambdaref/ds_slice) # The last part is slippage
+    on_axis_id_U2 = int(id_slice1+delay/ds_slice)
 
     print(on_axis_id_U2)
-
     ps_end_slice1 = beam_property_along_s(ps_end1, id_slices)[0:4, :]
     ps_on_axis_2 = np.ravel(ps_end_slice1[:, on_axis_id_U2])
 
-    OC2_optimized = analyze_orbit_corrector(OC2[0], OC2[-1], OC2[1:-1], ps_on_axis_2)
+    OC2_optimized = analyze_orbit_corrector(Chicane[0], Chicane[-1], Chicane[1:-1], ps_on_axis_2)
     print(OC2_optimized)
-    CORR08_new = Orbit_Corrector(OC2[0].length, OC2_optimized[0], OC2_optimized[2])
-    CORR09_new = Orbit_Corrector(OC2[-1].length, OC2_optimized[1], OC2_optimized[3])
 
-    # The whole U2 with optimized orbit correctors
-    U2_new = [CORR08_new] + OC2[1:-1] + [CORR09_new] + U_core[1]
-    ps_end2 = beam_transportation(ps_end1, U2_new)
+    CORR08_new = Orbit_Corrector(Chicane[0].length, OC2_optimized[0], OC2_optimized[2])
+    CORR09_new = Orbit_Corrector(Chicane[-1].length, OC2_optimized[1], OC2_optimized[3])
 
-    # ps_end2 is a 4-by-N array. N is the number of macro-particles. It is the full
-    # 4D phase space distribution at the end of the second undulator section.
+    Undulator_Beamline = U1_core + [CORR08_new] + Chicane[1:-1] + [CORR09_new] + U2_core
 
-    # The id of the slice on the axis in the third undulator section
-    on_axis_id_U3 = int(id_slice1+(delay[0]+delay[1])/ds_slice +(14*110*lambdaref)/ds_slice) # The last term is the slipage
-
-    print(on_axis_id_U3)
-
-    ps_end_slice2 = beam_property_along_s(ps_end2, id_slices)[0:4, :]
-    ps_on_axis_3 = np.ravel(ps_end_slice2[ :, on_axis_id_U3])
-
-    OC3_optimized = analyze_orbit_corrector(OC3[0], OC3[-1], OC3[1:-1], ps_on_axis_3)
-    print(OC3_optimized)
-    CORR15_new = Orbit_Corrector(OC3[0].length, OC3_optimized[0], OC3_optimized[2])
-    CORR16_new = Orbit_Corrector(OC3[-1].length, OC3_optimized[1], OC3_optimized[3])
-
-    U3_new = [CORR15_new] + OC3[1:-1] + [CORR16_new] + U_core[2]
-
-    Undulator_Beamline = U1_new+U2_new+U3_new
-
-    return Undulator_Beamline, OC2_optimized, OC3_optimized
+    return Undulator_Beamline, OC2_optimized
 
 
 ## Initialize all the components
 
 ### QUAD ###
-QUAD01=Quadrupole(0.078,-2.97177294204433)
-QUAD02=Quadrupole(0.078,+2.97177294204433)
-QUAD03=Quadrupole(0.078,-2.97177294204433)
-QUAD04=Quadrupole(0.078,+2.97177294204433)
-QUAD05=Quadrupole(0.078,-2.97177294204433)
-QUAD06=Quadrupole(0.078,+2.97177294204433)
-QUAD07=Quadrupole(0.078,-2.97177294204433)
-QUAD08=Quadrupole(0.078,+2.97177294204433)
-QUAD09=Quadrupole(0.078,-2.97177294204433)
-QUAD10=Quadrupole(0.078,+2.97177294204433)
-QUAD11=Quadrupole(0.078,-2.97177294204433)
-QUAD12=Quadrupole(0.078,+2.97177294204433)
-QUAD13=Quadrupole(0.078,-2.97177294204433)
-QUAD14=Quadrupole(0.078,+2.97177294204433)
-QUAD15=Quadrupole(0.078,-2.97177294204433)
-QUAD16=Quadrupole(0.078,+2.97177294204433)
-QUAD17=Quadrupole(0.078,-2.97177294204433)
-QUAD18=Quadrupole(0.078,+2.97177294204433)
-QUAD19=Quadrupole(0.078,-2.97177294204433)
-QUAD20=Quadrupole(0.078,+2.97177294204433)
-QUAD21=Quadrupole(0.078,-2.97177294204433)
-QUAD22=Quadrupole(0.078,+2.97177294204433)
-QUAD23=Quadrupole(0.078,-2.97177294204433)
-QUAD24=Quadrupole(0.078,+2.97177294204433)
+QSXH26 = Quadrupole(0.084, 1.784478917)
+QSXH27 = Quadrupole(0.084, -1.784478917)
+QSXH28 = Quadrupole(0.084, 1.784478917)
+QSXH29 = Quadrupole(0.084, -1.784478917)
+QSXH30 = Quadrupole(0.084, 1.784478917)
+QSXH31 = Quadrupole(0.084, -1.784478917)
+QSXH32 = Quadrupole(0.084, 1.784478917)
+QSXH33 = Quadrupole(0.084, -1.784478917)
+QSXH34 = Quadrupole(0.084, 1.784478917)
+QSXH35 = Quadrupole(0.084, -1.784478917)
+QSXH36 = Quadrupole(0.084, 1.784478917)
+QSXH37 = Quadrupole(0.084, -1.784478917)
+QSXH38 = Quadrupole(0.084, 1.784478917)
+QSXH39 = Quadrupole(0.084, -1.784478917)
+QSXH40 = Quadrupole(0.084, 1.784478917)
+QSXH41 = Quadrupole(0.084, -1.784478917)
+QSXH42 = Quadrupole(0.084, 1.784478917)
+QSXH43 = Quadrupole(0.084, -1.784478917)
+QSXH44 = Quadrupole(0.084, 1.784478917)
+QSXH45 = Quadrupole(0.084, -1.784478917)
+QSXH46 = Quadrupole(0.084, 1.784478917)
+QSXH47 = Quadrupole(0.084, -1.784478917)
 
 ### Drift ###
-D1 = Drift( 0.261 )
-D2 = Drift( 0.411 )
+D1 = Drift( 0.1335 )
+D2 = Drift( 0.4615 )
+D3 = Drift( 0.328 )
 
 ### Undulator ###
 
 UND00 = Undulator(0.03, 110, 2.4748)
-UND01 = Undulator(0.03, 110, 2.4750)
-UND02 = Undulator(0.03, 110, 2.4746)
-UND03 = Undulator(0.03, 110, 2.4742)
-UND04 = Undulator(0.03, 110, 2.4738)
-UND05 = Undulator(0.03, 110, 2.4734)
-UND06 = Undulator(0.03, 110, 2.4690)
-UND07 = Undulator(0.03, 110, 2.4690)
-UND08 = Undulator(0.03, 110, 2.4690)
 
-UND10 = Undulator(0.03, 110, 2.47999 )
-UND11 = Undulator(0.03, 110, 2.47998 )
-UND12 = Undulator(0.03, 110, 2.47997 )
-UND13 = Undulator(0.03, 110, 2.47996 )
-UND14 = Undulator(0.03, 110, 2.47800 )
-UND15 = Undulator(0.03, 110, 2.47800 )
 
-UND17 = Undulator(0.03, 110, 2.49 )
-UND18 = Undulator(0.03, 110, 2.4857 )
-UND19 = Undulator(0.03, 110, 2.4808000000000003 )
-UND20 = Undulator(0.03, 110, 2.4753000000000003 )
-UND21 = Undulator(0.03, 110, 2.4692000000000003 )
-UND22 = Undulator(0.03, 110, 2.4625000000000004 )
-UND23 = Undulator(0.03, 110, 2.4552 )
-UND24 = Undulator(0.03, 110, 2.4473000000000003 )
-UND25 = Undulator(0.03, 110, 2.4613600000000004 )
-UND26 = Undulator(0.03, 110, 2.45476 )
-UND27 = Undulator(0.03, 110, 2.4471600000000002 )
-UND28 = Undulator(0.03, 110, 2.43856 )
-UND29 = Undulator(0.03, 110, 2.4289600000000005 )
-UND30 = Undulator(0.03, 110, 2.41836 )
-UND31 = Undulator(0.03, 110, 2.4067600000000002 )
-UND32 = Undulator(0.03, 110, 0.0 )
+UMASXH26 = Undulator(0.039, 87, 2.616540022441109)
+UMASXH27 = Undulator(0.039, 87, 2.616540022441109)
+UMASXH28 = Undulator(0.039, 87, 2.616540022441109)
+UMASXH29 = Undulator(0.039, 87, 2.616540022441109)
+UMASXH30 = Undulator(0.039, 87, 2.616540022441109)
+UMASXH31 = Undulator(0.039, 87, 2.616540022441109)
+UMASXH32 = Undulator(0.039, 87, 2.616540022441109)
+UMASXH33 = Undulator(0.039, 87, 2.616540022441109)
+UMASXH34 = Undulator(0.039, 87, 2.616540022441109)
 
-### Orbit Corrector ###
-# CORR00 = Orbit_Corrector( 0.001, 0e-6, -75e-6)
-# CORR01 = Orbit_Corrector( 0.411, 0, 0)
+UMASXH36 = Undulator(0.039, 87, 2.616540022441109)
+UMASXH37 = Undulator(0.039, 87, 2.616540022441109)
+UMASXH38 = Undulator(0.039, 87, 2.616540022441109)
+UMASXH39 = Undulator(0.039, 87, 2.616540022441109)
+UMASXH40 = Undulator(0.039, 87, 2.616540022441109)
+UMASXH41 = Undulator(0.039, 87, 2.616540022441109)
+UMASXH42 = Undulator(0.039, 87, 2.616540022441109)
+UMASXH43 = Undulator(0.039, 87, 2.616540022441109)
+UMASXH44 = Undulator(0.039, 87, 2.616540022441109)
+UMASXH45 = Undulator(0.039, 87, 2.616540022441109)
+UMASXH46 = Undulator(0.039, 87, 2.616540022441109)
+UMASXH47 = Undulator(0.039, 87, 2.616540022441109)
 
-CORR00 = Orbit_Corrector( 0.001, -4.20302333e-06, -6.22946775e-05)
-CORR01 = Orbit_Corrector( 0.411, 5.67436428e-06, -4.76823760e-06)
-CORR02 = Orbit_Corrector( 0.411, 0, 0)
-CORR03 = Orbit_Corrector( 0.411, 0, 0)
-CORR04 = Orbit_Corrector( 0.411, 0, 0)
-CORR05 = Orbit_Corrector( 0.411, 0, 0)
-CORR06 = Orbit_Corrector( 0.411, 0, 0)
-CORR07 = Orbit_Corrector( 0.411, 0, 0)
+# Orbit Correctors
 
-# CORR08 = Orbit_Corrector( 0.411, -5e-6, -6e-5)
-# CORR09 = Orbit_Corrector( 0.411, 0, 2.2e-5)
-CORR08 = Orbit_Corrector( 0.411, -1.03675773e-05, -3.42800735e-05)
-CORR09 = Orbit_Corrector( 0.411, 8.45248529e-06, 1.36110114e-05)
-CORR10 = Orbit_Corrector( 0.411, 0, 0)
-CORR11 = Orbit_Corrector( 0.411, 0, 0)
-CORR12 = Orbit_Corrector( 0.411, 0, 0)
-CORR13 = Orbit_Corrector( 0.411, 0, 0)
-CORR14 = Orbit_Corrector( 0.411, 0, 0)
+CORR00 = Orbit_Corrector( 0.001, 0, 0)
+CORR01 = Orbit_Corrector( 0.001, 0, 0)
+CORR02 = Orbit_Corrector( 0.001, 0, 0)
+CORR03 = Orbit_Corrector( 0.001, 0, 0)
+CORR04 = Orbit_Corrector( 0.001, 0, 0)
+CORR05 = Orbit_Corrector( 0.001, 0, 0)
+CORR06 = Orbit_Corrector( 0.001, 0, 0)
+CORR07 = Orbit_Corrector( 0.001, 0, 0)
 
-CORR15 = Orbit_Corrector( 0.411, -8.41412685e-06, 2.66302968e-05)
-CORR16 = Orbit_Corrector( 0.411, 7.80166049e-06, 1.22830809e-05)
+CORR08 = Orbit_Corrector( 0.001, 0, 0)
+CORR09 = Orbit_Corrector( 0.001, 0, 0)
+CORR10 = Orbit_Corrector( 0.001, 0, 0)
+CORR11 = Orbit_Corrector( 0.001, 0, 0)
+CORR12 = Orbit_Corrector( 0.001, 0, 0)
+CORR13 = Orbit_Corrector( 0.001, 0, 0)
+CORR14 = Orbit_Corrector( 0.001, 0, 0)
 
-CORR17 = Orbit_Corrector( 0.411, 0, 0)
-CORR18 = Orbit_Corrector( 0.411, 0, 0)
-CORR19 = Orbit_Corrector( 0.411, 0, 0)
-CORR20 = Orbit_Corrector( 0.411, 0, 0)
-CORR21 = Orbit_Corrector( 0.411, 0, 0)
-CORR22 = Orbit_Corrector( 0.411, 0, 0)
-CORR23 = Orbit_Corrector( 0.411, 0, 0)
-CORR24 = Orbit_Corrector( 0.411, 0, 0)
+CORR15 = Orbit_Corrector( 0.001, 0, 0)
+CORR16 = Orbit_Corrector( 0.001, 0, 0)
+
+CORR17 = Orbit_Corrector( 0.001, 0, 0)
+CORR18 = Orbit_Corrector( 0.001, 0, 0)
+CORR19 = Orbit_Corrector( 0.001, 0, 0)
+CORR20 = Orbit_Corrector( 0.001, 0, 0)
+CORR21 = Orbit_Corrector( 0.001, 0, 0)
+CORR22 = Orbit_Corrector( 0.001, 0, 0)
+CORR23 = Orbit_Corrector( 0.001, 0, 0)
+CORR24 = Orbit_Corrector( 0.001, 0, 0)
 
 ### Chicane ###
-SXSS = Chicane( 3, 0.1, 0.0, 2.75e-06)
+SXRSS = Chicane( 3.4, 0.1, 0.0, 0.01e-06)
 
-HXSS = Chicane( 3, 0.1, 0.0, 6e-06)
-
-### PHASESHIFTER
-SXSS_PHASE = Drift(0.3)
-HXSS_PHASE = Drift(0.3)
 
 ### Useful Beamline ###
+LCLS2_SXR = [D1, UMASXH26, D2, QSXH26, CORR00, D3,
+D1, UMASXH27, D2, QSXH27, CORR01, D3,
+D1, UMASXH28, D2, QSXH28, CORR02, D3,
+D1, UMASXH29, D2, QSXH29, CORR03, D3,
+D1, UMASXH30, D2, QSXH30, CORR04, D3,
+D1, UMASXH31, D2, QSXH31, CORR05, D3,
+D1, UMASXH32, D2, QSXH32, CORR06, D3,
+D1, UMASXH33, D2, QSXH33, CORR07, D3,
+D1, UMASXH34, D2, QSXH34, CORR08, D3,
+D1, SXRSS   , D2, QSXH35, CORR09, D3,
+D1, UMASXH36, D2, QSXH36, CORR10, D3,
+D1, UMASXH37, D2, QSXH37, CORR11, D3,
+D1, UMASXH38, D2, QSXH38, CORR12, D3,
+D1, UMASXH39, D2, QSXH39, CORR13, D3,
+D1, UMASXH40, D2, QSXH40, CORR14, D3,
+D1, UMASXH41, D2, QSXH41, CORR15, D3,
+D1, UMASXH42, D2, QSXH42, CORR16, D3,
+D1, UMASXH43, D2, QSXH43, CORR17, D3,
+D1, UMASXH44, D2, QSXH44, CORR18, D3,
+D1, UMASXH45, D2, QSXH45, CORR19, D3,
+D1, UMASXH46, D2, QSXH46, CORR20, D3,
+D1, UMASXH47, D2, QSXH47, CORR21, D3]
 
-U1 = [ CORR00,
-UND01, D1, QUAD01, CORR01,
-UND02, D1, QUAD02, CORR02,
-UND03, D2, QUAD03, CORR03,
-UND04, D1, QUAD04, CORR04,
-UND05, D1, QUAD05, CORR05,
-UND06, D2, QUAD06, CORR06,
-UND07, D1, QUAD07, CORR07,
-UND08, D1, QUAD08, CORR08]
-
-
-U3 = [ CORR00,
-UND01, D1, QUAD01, CORR01,
-UND02, D1, QUAD02, CORR02,
-UND03, D2, QUAD03, CORR03,
-UND04, D1, QUAD04, CORR04,
-UND05, D1, QUAD05, CORR05,
-UND06, D2, QUAD06, CORR06,
-UND07, D1, QUAD07, CORR07,
-UND08, D1, QUAD08, CORR08,
-SXSS,  D2, QUAD09, CORR09,
-UND10, D1, QUAD10, CORR10,
-UND11, D1, QUAD11, CORR11,
-UND12, D2, QUAD12, CORR12,
-UND13, D1, QUAD13, CORR13,
-UND14, D1, QUAD14, CORR14,
-UND15, D2, QUAD15, CORR15,
-HXSS,  D1, QUAD16, CORR16,
-UND17, D1, QUAD17, CORR17,
-UND18, D2, QUAD18, CORR18,
-UND19, D1, QUAD19, CORR19,
-UND20, D1, QUAD20, CORR20,
-UND21, D2, QUAD21, CORR21,
-UND22, D1, QUAD22, CORR22,
-UND23, D1, QUAD23, CORR23,
-UND24, D2, QUAD24, CORR24]
-
-U3_test = [ CORR00,
-UND01, D1, QUAD01, CORR01,
-UND02, D1, QUAD02, CORR02,
-UND03, D2, QUAD03, CORR03,
-UND04, D1, QUAD04, CORR04,
-UND05, D1, QUAD05, CORR05,
-UND06, D2, QUAD06, CORR06,
-UND07, D1, QUAD07, CORR07,
-UND08, D1, QUAD08, CORR08,
-SXSS, SXSS_PHASE,  D2, QUAD09, CORR09,
-UND10, D1, QUAD10, CORR10,
-UND11, D1, QUAD11, CORR11,
-UND12, D2, QUAD12, CORR12,
-UND13, D1, QUAD13, CORR13,
-UND14, D1, QUAD14, CORR14,
-UND15, D2, QUAD15, CORR15,
-HXSS, HXSS_PHASE, D1, QUAD16, CORR16,
-UND17, D1, QUAD17, CORR17,
-UND18, D2, QUAD18, CORR18,
-UND19, D1, QUAD19, CORR19,
-UND20, D1, QUAD20, CORR20,
-UND21, D2, QUAD21, CORR21,
-UND22, D1, QUAD22, CORR22,
-UND23, D1, QUAD23, CORR23,
-UND24, D2, QUAD24, CORR24]
-
-
-## Here I want to set up a beamline to simulate the by-center orbit when we just don't set up any orbit corrector at all.
-## Unfortunately, since in Marc's code he uniformly shifted the beam, here we need to play with the first pair of orbit
-## correctors to make sure that the head is on the axis.
-
-CORR00_no_kick = Orbit_Corrector( 0.001, 0, 0)
-CORR01_no_kick = Orbit_Corrector( 0.411, 0, 0)
-
-CORR08_no_kick = Orbit_Corrector( 0.411, 0, 0)
-CORR09_no_kick = Orbit_Corrector( 0.411, 0, 0)
-
-CORR15_no_kick = Orbit_Corrector( 0.411, 0, 0)
-CORR16_no_kick = Orbit_Corrector( 0.411, 0, 0)
-
-U3_no_kick = [ CORR00_no_kick,
-UND01, D1, QUAD01, CORR01_no_kick,
-UND02, D1, QUAD02, CORR02,
-UND03, D2, QUAD03, CORR03,
-UND04, D1, QUAD04, CORR04,
-UND05, D1, QUAD05, CORR05,
-UND06, D2, QUAD06, CORR06,
-UND07, D1, QUAD07, CORR07,
-UND08, D1, QUAD08, CORR08_no_kick,
-SXSS, SXSS_PHASE,  D2, QUAD09, CORR09_no_kick,
-UND10, D1, QUAD10, CORR10,
-UND11, D1, QUAD11, CORR11,
-UND12, D2, QUAD12, CORR12,
-UND13, D1, QUAD13, CORR13,
-UND14, D1, QUAD14, CORR14,
-UND15, D2, QUAD15, CORR15_no_kick,
-HXSS, HXSS_PHASE, D1, QUAD16, CORR16_no_kick,
-UND17, D1, QUAD17, CORR17,
-UND18, D2, QUAD18, CORR18,
-UND19, D1, QUAD19, CORR19,
-UND20, D1, QUAD20, CORR20,
-UND21, D2, QUAD21, CORR21,
-UND22, D1, QUAD22, CORR22,
-UND23, D1, QUAD23, CORR23,
-UND24, D2, QUAD24, CORR24]
 
 ## Set up the beamline part by part. The core part of each undulator beamline doesn't
 ## contain any orbit correctors.
 
-U1_core = [UND02, D1, QUAD02, CORR02,
-UND03, D2, QUAD03, CORR03,
-UND04, D1, QUAD04, CORR04,
-UND05, D1, QUAD05, CORR05,
-UND06, D2, QUAD06, CORR06,
-UND07, D1, QUAD07, CORR07,
-UND08, D1, QUAD08]
+U1_core = [D1, UMASXH26, D2, QSXH26, CORR00, D3,
+D1, UMASXH27, D2, QSXH27, CORR01, D3,
+D1, UMASXH28, D2, QSXH28, CORR02, D3,
+D1, UMASXH29, D2, QSXH29, CORR03, D3,
+D1, UMASXH30, D2, QSXH30, CORR04, D3,
+D1, UMASXH31, D2, QSXH31, CORR05, D3,
+D1, UMASXH32, D2, QSXH32, CORR06, D3,
+D1, UMASXH33, D2, QSXH33, CORR07, D3,
+D1, UMASXH34, D2, QSXH34]
 
-U2_core = [UND10, D1, QUAD10, CORR10,
-UND11, D1, QUAD11, CORR11,
-UND12, D2, QUAD12, CORR12,
-UND13, D1, QUAD13, CORR13,
-UND14, D1, QUAD14, CORR14,
-UND15, D2, QUAD15]
+U2_core = [D3,
+D1, UMASXH36, D2, QSXH36, CORR10, D3,
+D1, UMASXH37, D2, QSXH37, CORR11, D3,
+D1, UMASXH38, D2, QSXH38, CORR12, D3,
+D1, UMASXH39, D2, QSXH39, CORR13, D3,
+D1, UMASXH40, D2, QSXH40, CORR14, D3,
+D1, UMASXH41, D2, QSXH41, CORR15, D3,
+D1, UMASXH42, D2, QSXH42, CORR16, D3,
+D1, UMASXH43, D2, QSXH43, CORR17, D3,
+D1, UMASXH44, D2, QSXH44, CORR18, D3,
+D1, UMASXH45, D2, QSXH45, CORR19, D3,
+D1, UMASXH46, D2, QSXH46, CORR20, D3,
+D1, UMASXH47, D2, QSXH47, CORR21, D3]
 
-U3_core = [UND17, D1, QUAD17, CORR17,
-UND18, D2, QUAD18, CORR18,
-UND19, D1, QUAD19, CORR19,
-UND20, D1, QUAD20, CORR20,
-UND21, D2, QUAD21, CORR21,
-UND22, D1, QUAD22, CORR22,
-UND23, D1, QUAD23, CORR23,
-UND24, D2, QUAD24, CORR24]
+Chicane = [CORR08, D3,
+D1, SXRSS   , D2, QSXH35, CORR09]
 
-U_core = [U1_core, U2_core, U3_core]
-
-
-
-
-## Begin to write some file
-
-# ps_beg = np.zeros((4, len(bunch["t"])))
-
-# ps_beg[0, :] = bunch["x"]
-# ps_beg[1, :] = bunch["xp"]
-# ps_beg[2, :] = bunch["y"]
-# ps_beg[3, :] = bunch["yp"]
-
-# id_slices, zplot = flip_slice(bunch["t"], bins = 200)
+U_core = [U1_core, U2_core]

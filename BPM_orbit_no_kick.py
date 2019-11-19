@@ -1,7 +1,8 @@
 import h5py
 import numpy as np
 import matplotlib.pyplot as plt
-from LCLS_beamline import *
+#from LCLS_beamline import *
+from init_transportation import *
 
 if __name__ == "__main__":
 
@@ -19,7 +20,7 @@ if __name__ == "__main__":
 
     ##########
     beamline_id = Orbit_Corrector
-    ps_end = analyze_phase_space_at_end(ps_beg, LCLS_U3, beamline_id, id_slices, N_bin)
+    ps_end = analyze_phase_space_at_end(ps_beg, U3_no_kick, beamline_id, id_slices, N_bin)
 
     ds_slice = np.average(np.diff(zplot))
     analyze_on_axis(ps_end, 2, 8, ds_slice, zplot)
